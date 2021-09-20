@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--需要修改的位置，接口的全限定名称-->
+<mapper namespace="com.wang.downloadProject.download.dao.DownloadDao">
+    <!--需修改位置，id=接口内的实现方法，resultType=反值类型，类的全限定名称-->
+
+    <insert id="insertHistory" >
+        insert into tbl_download_history
+        (id,webPath,locPath,createTime) values(
+        #{id},
+        #{webPath},
+        #{locPath},
+        #{createTime})
+    </insert>
+</mapper>

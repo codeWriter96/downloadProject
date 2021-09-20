@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:context="http://www.springframework.org/schema/context" xmlns:tx="http://www.springframework.org/schema/tx"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd http://www.springframework.org/schema/context https://www.springframework.org/schema/context/spring-context.xsd http://www.springframework.org/schema/tx http://www.springframework.org/schema/tx/spring-tx.xsd http://www.springframework.org/schema/aop https://www.springframework.org/schema/aop/spring-aop.xsd">
+    <!--properties配置文件位置，类路径-->
+    <context:property-placeholder location="classpath:jdbc.properties"/>
+    <!--创建数据源对象-->
+    <bean id="mydataSource" class="com.alibaba.druid.pool.DruidDataSource" init-method="init" destroy-method="close">
+        <property name="url" value="${jdbc.url}"/>
+        <property name="username" value="${jdbc.username}"/>
+        <property name="password" value="${jdbc.password}"/>
+        <property name="maxActive" value="${jdbc.max}"/>
+    </bean>
+    <!--创建sqlSessionFactory对象-->
+    <bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+        <!--set注入，将dataSource数据源信息给了dataSource-->
+        <property name="dataSource" ref="mydataSource"/>
+        <!--Mybatis主配置文件的位置-->
+        <property name="configLocation" value="classpath:mybatis.xml"/>
+    </bean>
+    <!--创建dao对象使用SqlSession的getMapper（class）-->
+    <bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+        <!--指定SqlSessionFactory对象的id-->
+        <property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"/>
+        <!--指定需要创建代理对象的包名，对包内所有接口创建代理对象，
+    如有多个包，在包后采用,隔开，并放入spring容器内，dao为接口名小写-->
+        <property name="basePackage" value="com.wang.downloadProject.*.dao"/>
+    </bean>
+    <!--开启注解创建对象功能，对包为base-package下的所有注解进行扫描创建放入容器-->
+    <context:component-scan base-package="com.wang.downloadProject.*.service"/>
+
+    <!--==================================事务=====================================================-->
+    <!--声明事务管理器，并交给spring管理-->
+    <bean id="transactionManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+        <!--设置事务管理器内数据源set注入内容-->
+        <property name="dataSource" ref="mydataSource"/>
+    </bean>
+    <!--验证码bean-->
+    <bean id="captchaProducer" class="com.google.code.kaptcha.impl.DefaultKaptcha">
+        <property name="config">
+            <bean class="com.google.code.kaptcha.util.Config">
+                <constructor-arg>
+                    <props>
+                        <prop key="kaptcha.border">no</prop>
+                        <prop key="kaptcha.image.width">120</prop>
+                        <prop key="kaptcha.session.key">code</prop>
+                        <prop key="kaptcha.textproducer.font.color">blue</prop>
+                        <prop key="kaptcha.textproducer.font.size">40</prop>
+                        <prop key="kaptcha.textproducer.char.length">4</prop>
+                    </props>
+                </constructor-arg>
+            </bean>
+        </property>
+    </bean>
+
+
+    <!--开启注解驱动-->
+    <tx:annotation-driven transaction-manager="transactionManager"/>
+    <!--采用aspectJ事务模式-->
+    <!--开启aspectJ事务驱动，告诉spring采用aspectJ管理事务,并声明事务类型:隔离级别，传播行为，默认超时时间等-->
+    <tx:advice id="myAdivce" transaction-manager="transactionManager">
+        <tx:attributes>
+            <!--声明方法的声明事务类型:隔离级别，传播行为，默认超时时间等-->
+            <tx:method name="insert*" propagation="REQUIRED"/>
+            <tx:method name="delete*" propagation="REQUIRED"/>
+            <tx:method name="update*" propagation="REQUIRED"/>
+            <tx:method name="select*" propagation="SUPPORTS" read-only="true"/>
+        </tx:attributes>
+    </tx:advice>
+    <!--配置需要aspectJ创建的切面的执行时间（advice-ref，事务采用Around方式），切入点集合（pointcut-ref），也就是xml文件格式的aspectJ配置过程-->
+    <aop:config>
+        <aop:pointcut id="servicePt" expression="execution(* *..service..*.*(..))"/>
+        <aop:advisor advice-ref="myAdivce" pointcut-ref="servicePt"/>
+    </aop:config>
+
+</beans>
